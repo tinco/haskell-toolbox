@@ -13,9 +13,22 @@ main = do
 	putStrLn "Parsing Hackage DB.."
 	db <- DB.readHackage
 	putStrLn "Done."
-	putStrLn "Calculating categories.."
-	mapM_ putStrLn (getCategories db)
+	--putStrLn "Calculating categories.."
+	--mapM_ putStrLn (getCategories db)
+	--putStrLn "Done."
+	putStrLn "Calculating dependency scores.."
+	let dependantsCounts = buildDependantsCounts db
+	let dependantStrings = Map.mapWithKey (\ n v -> n ++ " " ++ (show v)) dependantsCounts
+	mapM_ putStrLn dependantStrings
 	putStrLn "Done."
+
+buildDependantsCounts :: DB.Hackage -> Map.Map String Int
+buildDependantsCounts db = foldl insertDependant Map.empty dependencies
+	where
+		packages = Map.elems db
+		cabals = map (Package.packageDescription . List.last . Map.elems) packages
+		dependencies = map (\ (DB.Dependency n _) -> DB.unPackageName n) $ concatMap Package.buildDepends cabals
+		insertDependant m d = Map.insertWith' (\ _ v -> v + 1) d 0 m
 
 getCategories :: DB.Hackage -> [String]
 getCategories db = Set.toList categories
