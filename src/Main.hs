@@ -10,8 +10,12 @@ import qualified Data.Text as Text
 
 main :: IO ()
 main = do
+	putStrLn "Parsing Hackage DB.."
 	db <- DB.readHackage
+	putStrLn "Done."
+	putStrLn "Calculating categories.."
 	mapM_ putStrLn (getCategories db)
+	putStrLn "Done."
 
 getCategories :: DB.Hackage -> [String]
 getCategories db = Set.toList categories
