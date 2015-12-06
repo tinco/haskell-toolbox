@@ -24,34 +24,32 @@ main = do
 	--putStrLn "Done."
 
 	let packageDescriptions = buildPackageDescriptions db
-
-	putStrLn "Calculating dependency scores.."
 	let dependantsCounts = buildDependantsCounts packageDescriptions
-	putStrLn "Done."
-
-	let categoryScores = buildCategoryScores packageDescriptions dependantsCounts
-	putStrLn "ok"
+	let categoryScores = buildCategoryScores categories dependantsCounts
 
 	let categoryScoreLines = Map.mapWithKey (\ n v -> n ++ " " ++ (show v)) categoryScores
 	mapM_ putStrLn categoryScoreLines
 
 type PackageDescriptions = Map.Map String Package.PackageDescription
 type ScoreMap = Map.Map String Int
+type Categories = Map.Map String [Package.PackageDescription]
+
+packageName :: Package.PackageDescription -> String
+packageName = DB.unPackageName . Package.packageName
 
 buildPackageDescriptions :: DB.Hackage -> PackageDescriptions 
 buildPackageDescriptions db = foldl insert Map.empty $ map (resolve . List.last . Map.elems) $ Map.elems db 
 	where
-		insert m package = Map.insert (DB.unPackageName . Package.packageName $ package) package m
+		insert m package = Map.insert (packageName $ package) package m
 		resolve = PackageConfiguration.flattenPackageDescription
 
-buildCategoryScores :: PackageDescriptions -> ScoreMap -> ScoreMap
-buildCategoryScores packageDescriptions packageScores = categoryScores
+buildCategoryScores :: Categories -> ScoreMap -> ScoreMap
+buildCategoryScores categories packageScores = categoryScores
 	where
-		categoryScores = foldl increaseScores Map.empty $ Map.assocs packageScores
-		increaseScores m (p, s) = foldl (increaseScore s) m $ Maybe.fromMaybe [] $ categories p
-		categories p = do 
-		  pkg <- Map.lookup p packageDescriptions
-		  return $ cleanCategories pkg
+		categoryScores = foldl insertScores Map.empty $ Map.assocs categories
+		insertScores m (c, ps) = Map.insert c (sum $ map lookupScore ps) m
+		lookupScore :: Package.PackageDescription -> Int
+		lookupScore p = Maybe.fromMaybe 0 (Map.lookup (packageName p) packageScores)
 
 buildDependantsCounts :: PackageDescriptions -> ScoreMap
 buildDependantsCounts db = foldl insertDependant Map.empty dependencies
@@ -63,12 +61,12 @@ buildDependantsCounts db = foldl insertDependant Map.empty dependencies
 increaseScore :: Int -> ScoreMap -> String -> ScoreMap
 increaseScore i m k = Map.insertWith' (\ _ v -> v + i) k 0 m
 
-getCategories :: DB.Hackage -> [String]
-getCategories db = Set.toList categories
+getCategories :: DB.Hackage -> Categories
+getCategories db = foldl insertPackage Map.empty packages
 	where
-		packages = Map.elems db
-		cabals = map (Package.packageDescription . List.last . Map.elems) packages
-		categories = Set.fromList . concat . (map cleanCategories) $ cabals	
+		packages = map (Package.packageDescription . List.last . Map.elems) $ Map.elems db
+		insertPackage m package = foldl (insertPackage' package) m $ cleanCategories package
+		insertPackage' p m category = Map.insertWith' (\_ v -> v ++ [p]) category [] m
 	
 cleanCategories :: Package.PackageDescription -> [String]
 cleanCategories package = (map (Text.unpack . Text.toTitle . Text.strip )) . (Text.splitOn ",") $ Text.pack . Package.category $ package
