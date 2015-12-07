@@ -26,9 +26,11 @@ main = do
 	let packageDescriptions = buildPackageDescriptions db
 	let dependantsCounts = buildDependantsCounts packageDescriptions
 	let categoryScores = buildCategoryScores categories dependantsCounts
-
-	let categoryScoreLines = Map.mapWithKey (\ n v -> n ++ " " ++ (show v)) categoryScores
-	mapM_ putStrLn categoryScoreLines
+	-- let categoryScoreLines = Map.mapWithKey (\ n v -> n ++ " " ++ (show v)) categoryScores
+	-- mapM_ putStrLn categoryScoreLines
+	let coCategoryString c = c ++ ": " ++ (List.intercalate ", " $ buildCoCategories categories [c])
+	let coCategories = map coCategoryString $ Map.keys categories
+	mapM_ putStrLn coCategories
 
 type PackageDescriptions = Map.Map String Package.PackageDescription
 type ScoreMap = Map.Map String Int
@@ -67,6 +69,14 @@ getCategories db = foldl insertPackage Map.empty packages
 		packages = map (Package.packageDescription . List.last . Map.elems) $ Map.elems db
 		insertPackage m package = foldl (insertPackage' package) m $ cleanCategories package
 		insertPackage' p m category = Map.insertWith' (\_ v -> v ++ [p]) category [] m
+
+buildCoCategories :: Categories -> [String] -> [String]
+buildCoCategories categories subjects = cocategories List.\\ subjects
+	where
+		-- the intersect of packages that are in each subject category
+		packages = List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) subjects
+		-- the union of the intersect of each of the packages with the subjects
+		cocategories = foldl List.union [] $ map cleanCategories packages
 	
 cleanCategories :: Package.PackageDescription -> [String]
 cleanCategories package = (map (Text.unpack . Text.toTitle . Text.strip )) . (Text.splitOn ",") $ Text.pack . Package.category $ package
