@@ -40,7 +40,7 @@ packageName :: Package.PackageDescription -> String
 packageName = DB.unPackageName . Package.packageName
 
 buildPackageDescriptions :: DB.Hackage -> PackageDescriptions 
-buildPackageDescriptions db = foldl insert Map.empty $ map (resolve . List.last . Map.elems) $ Map.elems db 
+buildPackageDescriptions db = List.foldl' insert Map.empty $ map (resolve . List.last . Map.elems) $ Map.elems db 
 	where
 		insert m package = Map.insert (packageName $ package) package m
 		resolve = PackageConfiguration.flattenPackageDescription
@@ -48,13 +48,13 @@ buildPackageDescriptions db = foldl insert Map.empty $ map (resolve . List.last 
 buildCategoryScores :: Categories -> ScoreMap -> ScoreMap
 buildCategoryScores categories packageScores = categoryScores
 	where
-		categoryScores = foldl insertScores Map.empty $ Map.assocs categories
+		categoryScores = List.foldl' insertScores Map.empty $ Map.assocs categories
 		insertScores m (c, ps) = Map.insert c (sum $ map lookupScore ps) m
 		lookupScore :: Package.PackageDescription -> Int
 		lookupScore p = Maybe.fromMaybe 0 (Map.lookup (packageName p) packageScores)
 
 buildDependantsCounts :: PackageDescriptions -> ScoreMap
-buildDependantsCounts db = foldl insertDependant Map.empty dependencies
+buildDependantsCounts db = List.foldl' insertDependant Map.empty dependencies
 	where
 		packages = Map.elems db
 		dependencies = map (\ (DB.Dependency n _) -> DB.unPackageName n) $ concatMap Package.buildDepends packages
@@ -64,10 +64,10 @@ increaseScore :: Int -> ScoreMap -> String -> ScoreMap
 increaseScore i m k = Map.insertWith' (\ _ v -> v + i) k 0 m
 
 getCategories :: DB.Hackage -> Categories
-getCategories db = foldl insertPackage Map.empty packages
+getCategories db = List.foldl' insertPackage Map.empty packages
 	where
 		packages = map (Package.packageDescription . List.last . Map.elems) $ Map.elems db
-		insertPackage m package = foldl (insertPackage' package) m $ cleanCategories package
+		insertPackage m package = List.foldl' (insertPackage' package) m $ cleanCategories package
 		insertPackage' p m category = Map.insertWith' (\_ v -> v ++ [p]) category [] m
 
 buildCoCategories :: Categories -> [String] -> [String]
@@ -76,7 +76,7 @@ buildCoCategories categories subjects = cocategories List.\\ subjects
 		-- the intersect of packages that are in each subject category
 		packages = List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) subjects
 		-- the union of the intersect of each of the packages with the subjects
-		cocategories = foldl List.union [] $ map cleanCategories packages
+		cocategories = List.foldl' List.union [] $ map cleanCategories packages
 	
 cleanCategories :: Package.PackageDescription -> [String]
 cleanCategories package = (map (Text.unpack . Text.toTitle . Text.strip )) . (Text.splitOn ",") $ Text.pack . Package.category $ package
