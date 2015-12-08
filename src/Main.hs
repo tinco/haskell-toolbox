@@ -24,7 +24,7 @@ main = do
 	--putStrLn "Done."
 
 	let packageDescriptions = buildPackageDescriptions db
-	let dependantsCounts = buildDependantsCounts packageDescriptions
+	let dependantsCounts = buildDependantsCounts $ Map.elems packageDescriptions
 	let categoryScores = buildCategoryScores categories dependantsCounts
 	-- let categoryScoreLines = Map.mapWithKey (\ n v -> n ++ " " ++ (show v)) categoryScores
 	-- mapM_ putStrLn categoryScoreLines
@@ -53,10 +53,13 @@ buildCategoryScores categories packageScores = categoryScores
 		lookupScore :: Package.PackageDescription -> Int
 		lookupScore p = Maybe.fromMaybe 0 (Map.lookup (packageName p) packageScores)
 
-buildDependantsCounts :: PackageDescriptions -> ScoreMap
-buildDependantsCounts db = foldl insertDependant Map.empty dependencies
+coCategoryPackages :: Categories -> [String] -> [Package.PackageDescription]
+coCategoryPackages categories cocategories =
+  List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) cocategories
+
+buildDependantsCounts :: [Package.PackageDescription] -> ScoreMap
+buildDependantsCounts packages = foldl insertDependant Map.empty dependencies
 	where
-		packages = Map.elems db
 		dependencies = map (\ (DB.Dependency n _) -> DB.unPackageName n) $ concatMap Package.buildDepends packages
 		insertDependant = increaseScore 1
 
@@ -74,7 +77,7 @@ buildCoCategories :: Categories -> [String] -> [String]
 buildCoCategories categories subjects = cocategories List.\\ subjects
 	where
 		-- the intersect of packages that are in each subject category
-		packages = List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) subjects
+		packages = coCategoryPackages categories subjects
 		-- the union of the intersect of each of the packages with the subjects
 		cocategories = foldl List.union [] $ map cleanCategories packages
 	
