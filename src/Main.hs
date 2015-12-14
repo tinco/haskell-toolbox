@@ -4,9 +4,31 @@ module Main where
 import Packages
 import qualified Data.Map as Map
 import qualified Data.List as List
+import Hakyll
 
 main :: IO ()
 main = do
+  db <- readHackage
+  generateMainPage
+
+generateMainPage = hakyll $ do
+  match "index.html" $ do
+	route idRoute
+	compile $ do
+	  let indexContext =
+		-- listField "posts" (postCtx tags) (return posts) <>
+		-- field "tags" (\_ -> renderTagList tags) <>
+		defaultContext
+
+	  getResourceBody
+		>>= applyAsTemplate indexContext
+		>>= loadAndApplyTemplate "templates/content.html" indexContext
+		>>= loadAndApplyTemplate "templates/default.html" indexContext
+		>>= relativizeUrls
+
+
+debugPackages :: IO ()
+debugPackages = do
 	putStrLn "Parsing Hackage DB.."
 	db <- readHackage
 	putStrLn "Done."
