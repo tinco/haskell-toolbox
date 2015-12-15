@@ -12,13 +12,13 @@ main = do
   generateMainPage
 
 generateMainPage = hakyll $ do
+  -- Read templates
+  match "templates/*" $ compile templateCompiler
+
   match "index.html" $ do
 	route idRoute
 	compile $ do
-	  let indexContext =
-		-- listField "posts" (postCtx tags) (return posts) <>
-		-- field "tags" (\_ -> renderTagList tags) <>
-		defaultContext
+	  let indexContext = defaultContext
 
 	  getResourceBody
 		>>= applyAsTemplate indexContext
