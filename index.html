@@ -3,10 +3,24 @@ title: Home
 ---
 
 <h1>Haskell Toolbox</h1>
-<ul>
-	$for(top20categories)$
-	<li>
-		<a href="">$name$</a> $score$
-	</li>
-	$endfor$
-</ul>
+<div id="top20categories">
+	<h2>Top 20 Categories</h2>
+	<ul>
+		$for(top20categories)$
+		<li>
+			<a href="">$name$</a> $score$
+		</li>
+		$endfor$
+	</ul>
+</div>
+
+<div id="top20packages">
+	<h2>Top 20 Packages</h2>
+	<ul>
+		$for(top20packages)$
+		<li>
+			<a href="">$name$</a> $score$
+		</li>
+		$endfor$
+	</ul>
+</div>

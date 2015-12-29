@@ -44,8 +44,11 @@ generateMainPage cache = hakyll $ do
 	route idRoute
 	compile $ do
 	  let top20Categories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
+	  let top20Packages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
+
 	  let indexContext =
 		listField "top20categories" (topCategoryContext cache) (return top20Categories) <>
+		listField "top20packages" (topPackageContext cache) (return top20Packages) <>
 		defaultContext
 
 	  getResourceBody
@@ -58,6 +61,9 @@ topCategoryContext :: CachedOperations -> Context (String, Int)
 topCategoryContext cache =
   field "name" (return.fst.itemBody) <>
   field "score" (return.show.snd.itemBody)
+
+topPackageContext :: CachedOperations -> Context (String, Int)
+topPackageContext = topCategoryContext 
 
 debugPackages :: IO ()
 debugPackages = do
