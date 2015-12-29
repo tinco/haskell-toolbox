@@ -49,6 +49,9 @@ buildDependantsCounts packages = foldl insertDependant Map.empty dependencies
 increaseScore :: Int -> ScoreMap -> String -> ScoreMap
 increaseScore i m k = Map.insertWith' (\ _ v -> v + i) k 0 m
 
+lookupScore :: String -> ScoreMap -> Int
+lookupScore n m = Maybe.fromMaybe 0 (Map.lookup n m)
+
 getCategories :: DB.Hackage -> Categories
 getCategories db = foldl insertPackage Map.empty packages
 	where

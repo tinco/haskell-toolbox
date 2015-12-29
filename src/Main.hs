@@ -36,12 +36,14 @@ main = do
 scoreSort :: (a, Int) -> (a, Int) -> Ordering
 scoreSort a b = comparing (Down . snd) a b
 
+relativeRoute = gsubRoute "pages/" (const "")
+
 generateMainPage cache = hakyll $ do
   -- Read templates
   match "templates/*" $ compile templateCompiler
 
-  match "index.html" $ do
-	route idRoute
+  match "pages/index.html" $ do
+	route relativeRoute
 	compile $ do
 	  let top20Categories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
 	  let top20Packages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
@@ -53,6 +55,28 @@ generateMainPage cache = hakyll $ do
 
 	  getResourceBody
 		>>= applyAsTemplate indexContext
+		>>= loadAndApplyTemplate "templates/content.html" indexContext
+		>>= loadAndApplyTemplate "templates/default.html" indexContext
+		>>= relativizeUrls
+
+  mapM (buildCategoryPage cache) $ Map.keys $ categories cache
+
+buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ category ++ ".html"] $ do
+	route idRoute
+	compile $ do
+	  let coCategories = buildCoCategories (categories cache) [category]
+	  let scoredCoCategories = map (\ cc -> (cc, lookupScore cc $ categoryScores cache ) ) coCategories
+	  let topCoCategories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ scoredCoCategories
+	  --let topPackages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
+
+	  let indexContext =
+		listField "topCoCategories" (topCategoryContext cache) (return topCoCategories) <>
+		--listField "top20packages" (topPackageContext cache) (return top20Packages) <>
+		defaultContext
+
+	  makeItem ""
+		>>= applyAsTemplate indexContext
+		>>= loadAndApplyTemplate "templates/category.html" indexContext
 		>>= loadAndApplyTemplate "templates/content.html" indexContext
 		>>= loadAndApplyTemplate "templates/default.html" indexContext
 		>>= relativizeUrls
