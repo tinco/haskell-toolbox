@@ -11,10 +11,10 @@ import Data.String
 import Data.Ord
 
 data CachedOperations = CachedOperations {
-  categories :: !Categories,
-  packageDescriptions :: !PackageDescriptions,
-  packageScores :: !ScoreMap,
-  categoryScores :: !ScoreMap
+	categories :: !Categories,
+	packageDescriptions :: !PackageDescriptions,
+	packageScores :: !ScoreMap,
+	categoryScores :: !ScoreMap
 }
 
 main :: IO ()
