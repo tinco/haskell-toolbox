@@ -58,7 +58,8 @@ generateMainPage cache = hakyll $ do
 				>>= loadAndApplyTemplate "templates/default.html" indexContext
 				>>= relativizeUrls
 
-	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
+	mapM (buildCategoryPage cache) $ take 30 $ Map.keys $ categories cache
+	mapM (buildPackagePage cache) $ take 30 $ Map.keys $ packageDescriptions cache
 
 buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ category ++ ".html"] $ do
 	route idRoute
@@ -77,6 +78,20 @@ buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ categ
 		makeItem ""
 			>>= applyAsTemplate indexContext
 			>>= loadAndApplyTemplate "templates/category.html" indexContext
+			>>= loadAndApplyTemplate "templates/content.html" indexContext
+			>>= loadAndApplyTemplate "templates/default.html" indexContext
+			>>= relativizeUrls
+
+buildPackagePage cache package = create [fromFilePath $ "package/" ++ package ++ ".html"] $ do
+	route idRoute
+	compile $ do
+		let indexContext =
+			constField "name" package <>
+			defaultContext
+
+		makeItem ""
+			>>= applyAsTemplate indexContext
+			>>= loadAndApplyTemplate "templates/package.html" indexContext
 			>>= loadAndApplyTemplate "templates/content.html" indexContext
 			>>= loadAndApplyTemplate "templates/default.html" indexContext
 			>>= relativizeUrls
