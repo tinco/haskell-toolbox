@@ -95,7 +95,9 @@ buildPackagePage cache package = create [fromFilePath $ "package/" ++ package ++
 	compile $ do
 		let packageDescription = lookupPackage package (packageDescriptions cache)
 		let packageCategories = cleanCategories packageDescription
-		let topSimilarPackages = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ buildSimilarPackages (categories cache) packageCategories
+		-- TODO we need to reject dissimilar packages, at least by filtering those with score 0
+		let mostSimilarPackages = map fst $ take 50 $ List.sortBy scoreSort $ Map.assocs $ buildSimilarPackages (categories cache) packageCategories
+		let topSimilarPackages = map scoreToItem $ take 20 $ List.sortBy scoreSort $ map (\ n -> (n, lookupScore n $ packageScores cache) ) mostSimilarPackages
 
 		let indexContext =
 			constField "name" package <>
