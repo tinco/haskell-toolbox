@@ -67,12 +67,14 @@ buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ categ
 		let coCategories = buildCoCategories (categories cache) [category]
 		let scoredCoCategories = map (\ cc -> (cc, lookupScore cc $ categoryScores cache ) ) coCategories
 		let topCoCategories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ scoredCoCategories
-		--let topPackages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
+		let packages = map packageName $ lookupCategory category (categories cache) 
+		let scoredPackages = map (\ p -> (p, lookupScore p $ packageScores cache ) ) packages
+		let topPackages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ scoredPackages
 
 		let indexContext =
 			constField "name" category <>
 			listField "topCoCategories" (topCategoryContext cache) (return topCoCategories) <>
-			--listField "top20packages" (topPackageContext cache) (return top20Packages) <>
+			listField "topPackages" (topPackageContext cache) (return topPackages) <>
 			defaultContext
 
 		makeItem ""
