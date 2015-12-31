@@ -33,12 +33,11 @@ buildCategoryScores categories packageScores = categoryScores
 	where
 		categoryScores = foldl insertScores Map.empty $ Map.assocs categories
 		insertScores m (c, ps) = Map.insert c (sum $ map lookupScore ps) m
-		lookupScore :: Package.PackageDescription -> Int
 		lookupScore p = Maybe.fromMaybe 0 (Map.lookup (packageName p) packageScores)
 
 coCategoryPackages :: Categories -> [String] -> [Package.PackageDescription]
 coCategoryPackages categories cocategories =
-  List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) cocategories
+	List.foldl1' List.intersect $ map (\ n -> Maybe.fromMaybe [] (Map.lookup n categories)) cocategories
 
 buildDependantsCounts :: [Package.PackageDescription] -> ScoreMap
 buildDependantsCounts packages = foldl insertDependant Map.empty dependencies
@@ -46,14 +45,13 @@ buildDependantsCounts packages = foldl insertDependant Map.empty dependencies
 		dependencies = map (\ (DB.Dependency n _) -> DB.unPackageName n) $ concatMap Package.buildDepends packages
 		insertDependant = increaseScore 1
 
-increaseScore :: Int -> ScoreMap -> String -> ScoreMap
-increaseScore i m k = Map.insertWith' (\ _ v -> v + i) k 0 m
-
-lookupScore :: String -> ScoreMap -> Int
-lookupScore n m = Maybe.fromMaybe 0 (Map.lookup n m)
-
-lookupCategory :: String -> Categories -> [Package.PackageDescription]
-lookupCategory n m = Maybe.fromMaybe [] (Map.lookup n m)
+buildSimilarPackages :: Categories -> [String] -> ScoreMap
+buildSimilarPackages categories referenceCategories = packageScores
+	where
+		packageScores = foldl insertCategoryScores Map.empty referenceCategories
+		insertCategoryScores m c = foldl insertPackageScores m $ lookupCategory c categories
+		insertPackageScores m p = Map.insert (packageName p) ((lookupScore p m) + 1) m
+		lookupScore p m = Maybe.fromMaybe 0 (Map.lookup (packageName p) m)
 
 getCategories :: DB.Hackage -> Categories
 getCategories db = foldl insertPackage Map.empty packages
@@ -72,3 +70,15 @@ buildCoCategories categories subjects = cocategories List.\\ subjects
 	
 cleanCategories :: Package.PackageDescription -> [String]
 cleanCategories package = (map (Text.unpack . Text.toTitle . Text.strip )) . (Text.splitOn ",") $ Text.pack . Package.category $ package
+
+increaseScore :: Int -> ScoreMap -> String -> ScoreMap
+increaseScore i m k = Map.insertWith' (\ _ v -> v + i) k 0 m
+
+lookupScore :: String -> ScoreMap -> Int
+lookupScore n m = Maybe.fromMaybe 0 (Map.lookup n m)
+
+lookupCategory :: String -> Categories -> [Package.PackageDescription]
+lookupCategory n m = Maybe.fromMaybe [] (Map.lookup n m)
+
+lookupPackage :: String -> PackageDescriptions -> Package.PackageDescription
+lookupPackage n ps = Maybe.fromJust $ Map.lookup n ps

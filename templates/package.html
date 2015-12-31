@@ -4,3 +4,25 @@ title: Package $name$
 
 <h1>Package $name$</h1>
 
+<div id="categories">
+	<h2>Categories</h2>
+	<ul>
+		$for(categories)$
+		<li>
+			<a href="">$name$</a>
+		</li>
+		$endfor$
+	</ul>
+</div>
+
+<div id="similarPackages">
+	<h2>Top Similar Packages</h2>
+	<ul>
+		$for(similarPackages)$
+		<li>
+			<a href="">$name$</a> $score$
+		</li>
+		$endfor$
+	</ul>
+</div>
+

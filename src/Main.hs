@@ -35,6 +35,12 @@ main = do
 scoreSort :: (a, Int) -> (a, Int) -> Ordering
 scoreSort a b = comparing (Down . snd) a b
 
+scoreToItem :: (String, Int) -> Item (String, Int)
+scoreToItem (n,i) = Item (fromString n) (n,i)
+
+stringToItem :: String -> Item (String)
+stringToItem s = Item (fromString s) s
+
 relativeRoute = gsubRoute "pages/" (const "")
 
 generateMainPage cache = hakyll $ do
@@ -44,7 +50,7 @@ generateMainPage cache = hakyll $ do
 	match "pages/index.html" $ do
 		route relativeRoute
 		compile $ do
-			let top20Categories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
+			let top20Categories = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
 			let top20Packages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
 
 			let indexContext =
@@ -58,8 +64,8 @@ generateMainPage cache = hakyll $ do
 				>>= loadAndApplyTemplate "templates/default.html" indexContext
 				>>= relativizeUrls
 
-	mapM (buildCategoryPage cache) $ take 30 $ Map.keys $ categories cache
-	mapM (buildPackagePage cache) $ take 30 $ Map.keys $ packageDescriptions cache
+	mapM (buildCategoryPage cache) $ take 100 $ Map.keys $ categories cache
+	mapM (buildPackagePage cache) $ take 100 $ Map.keys $ packageDescriptions cache
 
 buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ category ++ ".html"] $ do
 	route idRoute
@@ -87,8 +93,14 @@ buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ categ
 buildPackagePage cache package = create [fromFilePath $ "package/" ++ package ++ ".html"] $ do
 	route idRoute
 	compile $ do
+		let packageDescription = lookupPackage package (packageDescriptions cache)
+		let packageCategories = cleanCategories packageDescription
+		let topSimilarPackages = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ buildSimilarPackages (categories cache) packageCategories
+
 		let indexContext =
 			constField "name" package <>
+			listField "similarPackages" (topPackageContext cache) (return topSimilarPackages) <>
+			listField "categories" (categoryContext cache) (return $ map stringToItem packageCategories) <>
 			defaultContext
 
 		makeItem ""
@@ -105,6 +117,9 @@ topCategoryContext cache =
 
 topPackageContext :: CachedOperations -> Context (String, Int)
 topPackageContext = topCategoryContext 
+
+categoryContext :: CachedOperations -> Context (String)
+categoryContext cache = field "name" (return.itemBody)
 
 debugPackages :: IO ()
 debugPackages = do
