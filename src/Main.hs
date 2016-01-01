@@ -30,7 +30,15 @@ main = do
 		packageScores = packageScores,
 		categoryScores = categoryScores
 	}
+
+	putStrLn "Generating main page"
 	generateMainPage cache
+
+	--putStrLn "Generating package pages"
+	--generatePackagePages cache
+
+	--putStrLn "Generating category pages"
+	--generateCategoryPages cache
 
 scoreSort :: (a, Int) -> (a, Int) -> Ordering
 scoreSort a b = comparing (Down . snd) a b
@@ -42,6 +50,12 @@ stringToItem :: String -> Item (String)
 stringToItem s = Item (fromString s) s
 
 relativeRoute = gsubRoute "pages/" (const "")
+
+generatePackagePages cache = hakyll $ do
+	mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
+
+generateCategoryPages cache = hakyll $ do
+	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
 
 generateMainPage cache = hakyll $ do
 	-- Read templates
@@ -64,8 +78,8 @@ generateMainPage cache = hakyll $ do
 				>>= loadAndApplyTemplate "templates/default.html" indexContext
 				>>= relativizeUrls
 
-	mapM (buildCategoryPage cache) $ take 100 $ Map.keys $ categories cache
-	mapM (buildPackagePage cache) $ take 100 $ Map.keys $ packageDescriptions cache
+	mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
+	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
 
 buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ category ++ ".html"] $ do
 	route idRoute
@@ -90,13 +104,13 @@ buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ categ
 			>>= loadAndApplyTemplate "templates/default.html" indexContext
 			>>= relativizeUrls
 
-buildPackagePage cache package = create [fromFilePath $ "package/" ++ package ++ ".html"] $ do
+buildPackagePage cache package = create [fromFilePath $ "packages/" ++ package ++ ".html"] $ do
 	route idRoute
 	compile $ do
 		let packageDescription = lookupPackage package (packageDescriptions cache)
 		let packageCategories = cleanCategories packageDescription
-		-- TODO we need to reject dissimilar packages, at least by filtering those with score 0
-		let mostSimilarPackages = map fst $ take 50 $ List.sortBy scoreSort $ Map.assocs $ buildSimilarPackages (categories cache) packageCategories
+		-- TODO we need to reject dissimilar packages
+		let mostSimilarPackages = map fst $ List.sortBy scoreSort $ Map.assocs $ buildSimilarPackages (categories cache) packageCategories
 		let topSimilarPackages = map scoreToItem $ take 20 $ List.sortBy scoreSort $ map (\ n -> (n, lookupScore n $ packageScores cache) ) mostSimilarPackages
 
 		let indexContext =
