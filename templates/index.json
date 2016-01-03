@@ -1,0 +1,8 @@
+{
+    "packages": [
+        $for(packages)$"$name$",$endfor$ 
+    ],
+    categories: [
+        $for(categories)$"$name$",$endfor$ 
+    ]
+}

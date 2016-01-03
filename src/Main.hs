@@ -4,11 +4,13 @@ module Main where
 import Packages
 import qualified Data.Map as Map
 import qualified Data.List as List
+import qualified Data.Char as Char
 
 import           Data.Monoid     ((<>))
 import Hakyll
 import Data.String
 import Data.Ord
+import Debug.Trace
 
 data CachedOperations = CachedOperations {
 	categories :: !Categories,
@@ -31,14 +33,7 @@ main = do
 		categoryScores = categoryScores
 	}
 
-	putStrLn "Generating main page"
-	generateMainPage cache
-
-	--putStrLn "Generating package pages"
-	--generatePackagePages cache
-
-	--putStrLn "Generating category pages"
-	--generateCategoryPages cache
+	generatePages cache
 
 scoreSort :: (a, Int) -> (a, Int) -> Ordering
 scoreSort a b = comparing (Down . snd) a b
@@ -51,35 +46,32 @@ stringToItem s = Item (fromString s) s
 
 relativeRoute = gsubRoute "pages/" (const "")
 
-generatePackagePages cache = hakyll $ do
-	mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
-
-generateCategoryPages cache = hakyll $ do
-	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
-
-generateMainPage cache = hakyll $ do
+generatePages cache = hakyll $ do
 	-- Read templates
 	match "templates/*" $ compile templateCompiler
 
-	match "pages/index.html" $ do
-		route relativeRoute
-		compile $ do
-			let top20Categories = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
-			let top20Packages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
+	generateMainPage cache
+	mapM (buildIndexPage cache) $ ['a'..'z']
+	--mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
+	--mapM (buildCategoryPage cache) $ Map.keys $ categories cache
 
-			let indexContext =
-				listField "top20categories" (topCategoryContext cache) (return top20Categories) <>
-				listField "top20packages" (topPackageContext cache) (return top20Packages) <>
-				defaultContext
+generateMainPage cache = match "pages/index.html" $ do
+	route relativeRoute
+	compile $ do
+		let top20Categories = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ categoryScores cache
+		let top20Packages = map scoreToItem $ take 20 $ List.sortBy scoreSort $ Map.assocs $ packageScores cache
 
-			getResourceBody
-				>>= applyAsTemplate indexContext
-				>>= loadAndApplyTemplate "templates/content.html" indexContext
-				>>= loadAndApplyTemplate "templates/default.html" indexContext
-				>>= relativizeUrls
+		let indexContext =
+			listField "top20categories" (topCategoryContext cache) (return top20Categories) <>
+			listField "top20packages" (topPackageContext cache) (return top20Packages) <>
+			defaultContext
 
-	mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
-	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
+		getResourceBody
+			>>= applyAsTemplate indexContext
+			>>= loadAndApplyTemplate "templates/content.html" indexContext
+			>>= loadAndApplyTemplate "templates/default.html" indexContext
+			>>= relativizeUrls
+
 
 buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ category ++ ".html"] $ do
 	route idRoute
@@ -124,6 +116,24 @@ buildPackagePage cache package = create [fromFilePath $ "packages/" ++ package +
 			>>= loadAndApplyTemplate "templates/package.html" indexContext
 			>>= loadAndApplyTemplate "templates/content.html" indexContext
 			>>= loadAndApplyTemplate "templates/default.html" indexContext
+			>>= relativizeUrls
+
+buildIndexPage cache letter = create [fromFilePath $ "indexes/" ++ [letter] ++ ".json"] $ do
+	route idRoute
+	compile $ do
+		let letterFilter ((l:ls), i) = l == letter || l == (Char.toUpper letter)
+		    letterFilter ((ls), i) = False
+		let packages = map scoreToItem $ filter letterFilter $ Map.assocs $ packageScores cache
+		let categories = map scoreToItem $ filter letterFilter $ Map.assocs $ categoryScores cache
+
+		let indexContext =
+			constField "letter" ([letter]) <>
+			listField "packages" (topPackageContext cache) (return packages) <>
+			listField "categories" (topCategoryContext cache) (return categories) <>
+			defaultContext
+
+		makeItem ""
+			>>= loadAndApplyTemplate "templates/index.json" indexContext
 			>>= relativizeUrls
 
 topCategoryContext :: CachedOperations -> Context (String, Int)
