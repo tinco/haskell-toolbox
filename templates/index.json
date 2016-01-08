@@ -1,8 +1,8 @@
 {
     "packages": [
-        $for(packages)$"$name$",$endfor$ 
+        $for(packages)$["$name$", $score$], $endfor$
     ],
     categories: [
-        $for(categories)$"$name$",$endfor$ 
+        $for(categories)$["$name$", $score$], $endfor$
     ]
 }
