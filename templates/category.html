@@ -1,10 +1,20 @@
----
-title: Category $name$
----
-
 <h1>Category $name$</h1>
+
+<div id="topPackages">
+	<h2>Top Packages</h2>
+	<p class="description">Packages that have the most dependencies to them from other packages in this category.</p>
+	<ul>
+		$for(topPackages)$
+		<li>
+			<a href="/packages/$name$.html">$name$</a> $score$
+		</li>
+		$endfor$
+	</ul>
+</div>
+
 <div id="topCoCategories">
 	<h2>Top Paired Categories</h2>
+	<p class="description">Categories that are often combined with this category.</p>
 	<ul>
 		$for(topCoCategories)$
 		<li>
@@ -14,14 +24,4 @@ title: Category $name$
 	</ul>
 </div>
 
-<div id="topPackages">
-	<h2>Top Packages</h2>
-	<ul>
-		$for(topPackages)$
-		<li>
-			<a href="/packages/$name$.html">$name$</a> $score$
-		</li>
-		$endfor$
-	</ul>
-</div>
 
