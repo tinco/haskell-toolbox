@@ -47,13 +47,12 @@ stringToItem s = Item (fromString s) s
 relativeRoute = gsubRoute "pages/" (const "")
 
 generatePages cache = hakyll $ do
-	-- Read templates
 	match "templates/*" $ compile templateCompiler
 
 	generateMainPage cache
 	mapM (buildIndexPage cache) $ ['a'..'z']
-	--mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
-	--mapM (buildCategoryPage cache) $ Map.keys $ categories cache
+	mapM (buildPackagePage cache) $ Map.keys $ packageDescriptions cache
+	mapM (buildCategoryPage cache) $ Map.keys $ categories cache
 
 generateMainPage cache = match "pages/index.html" $ do
 	route relativeRoute
