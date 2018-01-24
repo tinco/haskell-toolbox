@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Packages
@@ -78,7 +78,7 @@ buildCategoryPage cache category = create [fromFilePath $ "categories/" ++ categ
 		let coCategories = buildCoCategories (categories cache) [category]
 		let scoredCoCategories = map (\ cc -> (cc, lookupScore cc $ categoryScores cache ) ) coCategories
 		let topCoCategories = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ scoredCoCategories
-		let packages = map packageName $ lookupCategory category (categories cache) 
+		let packages = map packageName $ lookupCategory category (categories cache)
 		let scoredPackages = map (\ p -> (p, lookupScore p $ packageScores cache ) ) packages
 		let topPackages = map (\ (n,i) -> Item (fromString n) (n,i) ) $ take 20 $ List.sortBy scoreSort $ scoredPackages
 
@@ -141,7 +141,7 @@ topCategoryContext cache =
 	field "score" (return.show.snd.itemBody)
 
 topPackageContext :: CachedOperations -> Context (String, Int)
-topPackageContext = topCategoryContext 
+topPackageContext = topCategoryContext
 
 categoryContext :: CachedOperations -> Context (String)
 categoryContext cache = field "name" (return.itemBody)
@@ -164,4 +164,3 @@ debugPackages = do
 	let coCategoryString c = c ++ ": " ++ (List.intercalate ", " $ buildCoCategories categories [c])
 	let coCategories = map coCategoryString $ Map.keys categories
 	mapM_ putStrLn coCategories
-

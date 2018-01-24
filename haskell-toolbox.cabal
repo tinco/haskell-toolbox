@@ -19,4 +19,3 @@ executable haskell-toolbox
   ghc-options:         -fno-warn-tabs
   build-depends:       base >= 4.7 && < 5, hackage-db, Cabal, containers, text, hakyll
   other-modules:       Packages
-
