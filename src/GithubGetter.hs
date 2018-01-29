@@ -11,6 +11,8 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy.Char8 as BL
 
+import Control.Concurrent (threadDelay)
+
 instance J.ToJSON Github.Repo
 instance J.ToJSON Github.RepoRef
 instance J.ToJSON Github.SimpleOwner
@@ -19,28 +21,29 @@ instance J.ToJSON Github.OwnerType
 main :: IO ()
 main = getRepositories
 
-getRepositories = do
-  result <- autoPaginateSearchRepos auth query
-
-  repos <- case result of
-    Left e -> fail $ "Error: " ++ show e
-    Right r -> return r
-
-  let totalCount = Github.searchResultTotalCount repos
-  let allRepos = Github.searchResultResults repos
-
-  BL.putStrLn $ J.encode allRepos
-
+getRepositories = getRepositories' 1
   where
-    query = "language:haskell pushed:>2017-01-20"
+    query = "language:haskell created:2017-01-20"
     auth = Nothing
+    getRepositories' page = do
+      result <- searchRepos auth query page
 
-autoPaginateSearchRepos :: (Maybe Github.Auth) -> Text -> IO (Either Github.Error (Github.SearchResult Github.Repo))
-autoPaginateSearchRepos auth searchString = do
-  firstResult <- searchRepos auth searchString 1
-  case firstResult of
-    Left e -> return firstResult
-    Right r -> return firstResult
+      repos <- case result of
+        Left e -> fail $ "Error: " ++ show e
+        Right r -> return r
+
+      let totalCount = Github.searchResultTotalCount repos
+      let allRepos = Github.searchResultResults repos
+
+      BL.writeFile ("data/repos-" ++ (show page) ++ ".json") $ J.encode allRepos
+
+      timeout <- case auth of
+        Nothing -> return 6
+        Just _ -> return 2
+
+      threadDelay $ timeout * 1000000
+
+      getRepositories' $ page + 1
 
 searchRepos :: Maybe Github.Auth -> Text -> Int -> IO (Either Github.Error (Github.SearchResult Github.Repo))
 searchRepos auth s i = Github.executeRequestMaybe auth $ searchReposR s i

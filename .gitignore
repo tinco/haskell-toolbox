@@ -2,3 +2,5 @@
 *.swp
 _*
 .DS_Store
+data/*
+!data/.gitkeep
