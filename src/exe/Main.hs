@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Packages
+import HaskellToolbox.Packages
+
 import qualified Data.Map as Map
 import qualified Data.List as List
 import qualified Data.Char as Char

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Packages where
+module HaskellToolbox.Packages where
 
 import qualified Distribution.Hackage.DB as DB
 import qualified Distribution.Package as P
