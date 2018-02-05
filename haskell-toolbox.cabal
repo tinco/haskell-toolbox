@@ -31,7 +31,7 @@ executable haskell-toolbox-github-processor
   main-is:             GitHubProcessor.hs
   default-language:    Haskell2010
   ghc-options:         -fno-warn-tabs
-  build-depends:       base >= 4.7 && < 5, text, aeson, hackage-db, Cabal, containers, haskell-toolbox
+  build-depends:       base >= 4.7 && < 5, text, aeson, hackage-db, Cabal, containers, haskell-toolbox, vector, bytestring, directory
 
 library
     hs-source-dirs:      src/lib
