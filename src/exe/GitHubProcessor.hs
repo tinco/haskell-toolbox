@@ -21,6 +21,8 @@ import Debug.Trace
 
 type AllPackageDescriptions = Map.Map String GithubAndHackagePackageDescription
 
+type GithubRepos = Map.Map String Github.Repo
+
 data GithubAndHackagePackageDescription = GithubAndHackagePackageDescription {
     onHackage :: Bool,
     packageName :: String,
@@ -44,7 +46,12 @@ main = do
   let packages = buildPackageDescriptions db
   githubProjects <- readGithubProjects
   let githubProjectMap = makeGithubProjectsMap githubProjects
-  -- let notOnCabal = filterOnCabal packages githubProjects
+  -- makeMergedDescriptions will try and match github projects to hackage cabal files
+  let mergedProjects = makeMergedDescriptions packages githubProjectMap
+  -- After they are merged we still need to download the missing cabal files.
+  -- After downloading missing cabal files we should run another deduplication step
+  -- so any github projects with repo names differing from their cabalfile names
+  -- are renamed to their cabalfile name, and merged with a hackage entry if existing
   return ()
   -- TODO annotate package descriptions with github info
 
@@ -55,7 +62,7 @@ readGithubProjects = do
   let parsedFiles = M.mapMaybe AE.decode' files :: [[Github.Repo]]
   return $ concat parsedFiles
 
-makeGithubProjectsMap :: [Github.Repo] -> Map.Map String Github.Repo
+makeGithubProjectsMap :: [Github.Repo] -> GithubRepos
 makeGithubProjectsMap projects = foldl addProject Map.empty projects
   where
     addProject m p = maybeInsert (getKey p) p m
@@ -69,21 +76,26 @@ makeGithubProjectsMap projects = foldl addProject Map.empty projects
     getKey o = toKey $ Github.repoName o
     toKey s = show s
 
--- filterOnCabal packages projects = M.mapMaybe isInPackages $ V.toList projects
---   where
---     isInPackages :: Github.Repo -> Maybe AE.Value
---     isInPackages p@(AE.Object o) = head $ M.catMaybes $ getGithubRepos o
---     isInPackages x = trace ("Something was not an object: " ++ (show x)) $ undefined
-    -- githubRepoParser :: Parser (Maybe String)
-    -- githubRepoParser = do
-    --   CMC.skipManyTill MP.anyChar $ do
-    --     MP.string' "github.com"
-    --     MP.oneOf ['/',':']
-    --     return True
-    --   owner <- CMC.manyTill MP.anyChar (MP.char '/')
-    --   repo <- CMC.manyTill MP.anyChar (MP.noneOf ['/', ' ', '?'])
-    --   return $ Just $ owner ++ "/" ++ repo
-
+-- We want to check for each github repo if it is related to a cabal project
+-- if it is not we want to keep it.
+-- Most performant would be to go through all cabal packages, and construct
+-- a github project name, and then removing the resulting list of project names
+-- from our project list.
+--
+-- The resulting AllPackageDescriptions could still have a bunch of github projects
+-- that are not linked to their cabal description. Checking their cabal files is
+-- still required to get a completely accurate AllPackageDescriptions.
+makeMergedDescriptions :: PackageDescriptions -> GithubRepos -> AllPackageDescriptions
+makeMergedDescriptions packages projects = makeMergedDescriptions' packages projects Map.empty
+makeMergedDescriptions' packages projects allDescriptions =
+  -- we can do this in multiple steps.
+  -- 1. check if the cabal project name is directly a github repo name, if it is
+  --    then add to allDescriptions, remove from packages and projects and recurses
+  -- 2. check if we can extract the github repo from the cabalfile properties, if
+  --    we can then add to allDescriptions, remove from packages and projects and recurse
+  -- ...?
+  --
+  where
     extractGithubRepo :: String -> Maybe String
     extractGithubRepo url = maybeResult matchUrl
       where
@@ -92,3 +104,14 @@ makeGithubProjectsMap projects = foldl addProject Map.empty projects
         maybeResult xs = trace ("Got more than one result: " ++ (show xs)) undefined
         matchUrl :: [[String]]
         matchUrl = url =~ ("github\\.com[:/][^/]+/[^/ ?]+" :: String)
+
+            -- We replaced the following repoParser with a regex:
+            -- githubRepoParser :: Parser (Maybe String)
+            -- githubRepoParser = do
+            --   CMC.skipManyTill MP.anyChar $ do
+            --     MP.string' "github.com"
+            --     MP.oneOf ['/',':']
+            --     return True
+            --   owner <- CMC.manyTill MP.anyChar (MP.char '/')
+            --   repo <- CMC.manyTill MP.anyChar (MP.noneOf ['/', ' ', '?'])
+            --   return $ Just $ owner ++ "/" ++ repo
