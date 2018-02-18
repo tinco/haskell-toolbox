@@ -33,7 +33,7 @@ executable haskell-toolbox-github-processor
   ghc-options:         -fno-warn-tabs
   build-depends:       base >= 4.7 && < 5, text, aeson, hackage-db, Cabal, containers,
                        haskell-toolbox, vector, bytestring, directory, unordered-containers,
-                       regex-posix
+                       regex-posix, github
 
 library
     hs-source-dirs:      src/lib
