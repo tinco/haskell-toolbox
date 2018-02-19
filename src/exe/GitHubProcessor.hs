@@ -24,9 +24,9 @@ type AllPackageDescriptions = Map.Map String GithubAndHackagePackageDescription
 type GithubRepos = Map.Map String Github.Repo
 
 data GithubAndHackagePackageDescription = GithubAndHackagePackageDescription {
-    onHackage :: Bool,
-    packageName :: String,
-    maybeGithubName :: Maybe String,
+    onHackage :: !Bool,
+    packageName :: !String,
+    maybeGithubName :: !(Maybe String),
     maybePackageDescription :: Maybe Package.PackageDescription,
     maybeGithubDescription :: Maybe Github.Repo
 }
@@ -87,15 +87,29 @@ makeGithubProjectsMap projects = foldl addProject Map.empty projects
 -- still required to get a completely accurate AllPackageDescriptions.
 makeMergedDescriptions :: PackageDescriptions -> GithubRepos -> AllPackageDescriptions
 makeMergedDescriptions packages projects = makeMergedDescriptions' packages projects Map.empty
-makeMergedDescriptions' packages projects allDescriptions =
+makeMergedDescriptions' packages projects allDescriptions = discoverGithubCabalRelations $ matchProjectNames
   -- we can do this in multiple steps.
   -- 1. check if the cabal project name is directly a github repo name, if it is
   --    then add to allDescriptions, remove from packages and projects and recurses
   -- 2. check if we can extract the github repo from the cabalfile properties, if
   --    we can then add to allDescriptions, remove from packages and projects and recurse
-  -- ...?
   --
   where
+    discoverGithubCabalRelations descriptions = undefined
+    matchProjectNames = Map.map createGithubAndHackagePackageDescription packages
+      where
+        createGithubAndHackagePackageDescription p = GithubAndHackagePackageDescription {
+          onHackage = True,
+          Main.packageName = name,
+          maybeGithubName = githubName,
+          maybePackageDescription = Just p,
+          maybeGithubDescription = githubRepo
+        }
+          where
+            name = HaskellToolbox.Packages.packageName p
+            githubRepo = Map.lookup name projects
+            githubName = liftM (show.Github.repoName) githubRepo
+
     extractGithubRepo :: String -> Maybe String
     extractGithubRepo url = maybeResult matchUrl
       where
