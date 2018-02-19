@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Main where
 
 import qualified Distribution.PackageDescription as Package
@@ -12,6 +12,7 @@ import qualified Data.Maybe as M
 import qualified Data.ByteString.Lazy as B
 import qualified System.Directory as D
 import Control.Monad
+import Data.Monoid
 
 import qualified GitHub.Data as Github
 
@@ -95,7 +96,31 @@ makeMergedDescriptions' packages projects allDescriptions = discoverGithubCabalR
   --    we can then add to allDescriptions, remove from packages and projects and recurse
   --
   where
-    discoverGithubCabalRelations descriptions = undefined
+    discoverGithubCabalRelations descriptions = Map.map discoverGithubCabalRelation descriptions
+      where
+        discoverGithubCabalRelation description
+          | M.isJust $ maybeGithubName description = description
+          | M.isJust discoveredGithubProject = updatedDescription
+          | otherwise = description
+          where
+            package = M.fromJust $ maybePackageDescription description
+            discoveredGithubProject :: Maybe Github.Repo
+            discoveredGithubProject = do
+              name <- findGithubName
+              Map.lookup name projects
+
+            findGithubName :: Maybe String
+            findGithubName = getFirst $ do
+              let homepage :: Maybe String = extractGithubRepo $ Package.homepage package
+              let repoLocations :: [Maybe String] = map extractGithubRepo $ M.mapMaybe Package.repoLocation $ Package.sourceRepos package
+              mconcat $ fmap First (homepage : repoLocations)
+              -- TODO other possible locations of github url?
+
+            updatedDescription = description {
+              maybeGithubName = liftM (show.Github.repoName) discoveredGithubProject,
+              maybeGithubDescription = discoveredGithubProject
+            }
+
     matchProjectNames = Map.map createGithubAndHackagePackageDescription packages
       where
         createGithubAndHackagePackageDescription p = GithubAndHackagePackageDescription {
