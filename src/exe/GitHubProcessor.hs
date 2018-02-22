@@ -8,6 +8,7 @@ import qualified Data.HashMap.Strict as HMap
 import HaskellToolbox.Packages
 import qualified Data.Vector as V
 import qualified Data.Aeson as AE
+import Data.Aeson ((.:), (.:?), (.!=))
 import qualified Data.Maybe as M
 import qualified Data.ByteString.Lazy as B
 import qualified System.Directory as D
@@ -19,6 +20,41 @@ import qualified GitHub.Data as Github
 import Text.Regex.Posix
 
 import Debug.Trace
+
+newtype MangledGithubRepo = MGR Github.Repo
+
+instance AE.FromJSON MangledGithubRepo where
+  parseJSON = AE.withObject "Repo" $ \o -> Github.Repo <$>
+            o .:? "repoSshUrl"
+        <*> o .: "repoDescription"
+        <*> o .:? "repoCreatedAt"
+        <*> o .: "repoHtmlUrl"
+        <*> o .:? "repoSvnUrl"
+        <*> o .:? "repoForks"
+        <*> o .:? "repoHomepage"
+        <*> o .: "repoFork"
+        <*> o .:? "repoGitUrl"
+        <*> o .: "repoPrivate"
+        <*> o .:? "repoArchived" .!= False
+        <*> o .:? "repoCloneUrl"
+        <*> o .:? "repoSize"
+        <*> o .:? "repoUpdatedAt"
+        <*> o .:? "repoWatchers"
+        <*> o .: "repoOwner"
+        <*> o .: "repoName"
+        <*> o .:? "repoLanguage"
+        <*> o .:? "repoDefaultBranch"
+        <*> o .:? "repoPushedAt"
+        <*> o .: "repoId"
+        <*> o .: "repoUrl"
+        <*> o .:? "repoOpenIssues"
+        <*> o .:? "repoHasWiki"
+        <*> o .:? "repoHasIssues"
+        <*> o .:? "repoHasDownloads"
+        <*> o .:? "repoParent"
+        <*> o .:? "repoSource"
+        <*> o .: "repoHooksUrl"
+        <*> o .: "repoStargazersCount"
 
 type AllPackageDescriptions = Map.Map String GithubAndHackagePackageDescription
 
@@ -46,9 +82,13 @@ main = do
   db <- readHackage
   let packages = buildPackageDescriptions db
   githubProjects <- readGithubProjects
+  putStrLn $ "Github Created Projects: " ++ (show $ length githubProjects)
   let githubProjectMap = makeGithubProjectsMap githubProjects
+  putStrLn $ "Github Unique Projects: " ++ (show $ Map.size githubProjectMap)
+  putStrLn $ "Hackage Unique Projects: " ++ (show $ Map.size packages)
   -- makeMergedDescriptions will try and match github projects to hackage cabal files
   let mergedProjects = makeMergedDescriptions packages githubProjectMap
+  putStrLn $ "Combined Unique Projects: " ++ (show $ Map.size mergedProjects)
   -- After they are merged we still need to download the missing cabal files.
   -- After downloading missing cabal files we should run another deduplication step
   -- so any github projects with repo names differing from their cabalfile names
@@ -59,8 +99,8 @@ main = do
 readGithubProjects :: IO ([Github.Repo])
 readGithubProjects = do
   filenames <- liftM (filter (\ f -> (take 5 f) == "repos")) $ D.listDirectory $ "data/"
-  files <- mapM B.readFile filenames
-  let parsedFiles = M.mapMaybe AE.decode' files :: [[Github.Repo]]
+  files <- mapM (\ f -> B.readFile ("data/" ++ f)) filenames
+  let parsedFiles = M.mapMaybe AE.decode' files :: [[MangledGithubRepo]]
   return $ concat parsedFiles
 
 makeGithubProjectsMap :: [Github.Repo] -> GithubRepos
