@@ -24,7 +24,7 @@ import Debug.Trace
 newtype MangledGithubRepo = MGR Github.Repo
 
 instance AE.FromJSON MangledGithubRepo where
-  parseJSON = AE.withObject "Repo" $ \o -> Github.Repo <$>
+  parseJSON v = liftM MGR . ($v) . AE.withObject "Repo" $ \o -> Github.Repo <$>
             o .:? "repoSshUrl"
         <*> o .: "repoDescription"
         <*> o .:? "repoCreatedAt"
@@ -100,8 +100,9 @@ readGithubProjects :: IO ([Github.Repo])
 readGithubProjects = do
   filenames <- liftM (filter (\ f -> (take 5 f) == "repos")) $ D.listDirectory $ "data/"
   files <- mapM (\ f -> B.readFile ("data/" ++ f)) filenames
-  let parsedFiles = M.mapMaybe AE.decode' files :: [[MangledGithubRepo]]
-  return $ concat parsedFiles
+  let parsedFiles = concat $ M.mapMaybe AE.decode' files :: [MangledGithubRepo]
+  let unmangledFiles = map (\ (MGR r) -> r) $ parsedFiles
+  return  unmangledFiles
 
 makeGithubProjectsMap :: [Github.Repo] -> GithubRepos
 makeGithubProjectsMap projects = foldl addProject Map.empty projects
