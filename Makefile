@@ -1,11 +1,10 @@
-all:
-	stack build
+all: build
 
-run:
-	stack exec haskell-toolbox build
+build:
+	stack exec haskell-toolbox-main build
 
-deploy:
-	rsync -aP _site/ haskell-toolbox.com:/srv/http/haskell-toolbox/
+docker:
+	docker build -t tinco/haskell-toolbox .
+	docker push tinco/haskell-toolbox
 
-clean:
-	stack exec haskell-toolbox clean
+.PHONY: all test clean docker
