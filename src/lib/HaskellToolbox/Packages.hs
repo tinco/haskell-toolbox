@@ -6,6 +6,7 @@ import qualified Distribution.Package as P
 import qualified Distribution.PackageDescription as Package
 import qualified Distribution.PackageDescription.Configuration as PackageConfiguration
 import qualified Distribution.Package as Package (packageName)
+import qualified Distribution.Types.PackageName as PackageName (unPackageName)
 import qualified Data.Map as Map
 import qualified Data.List as List
 import qualified Data.Set as Set
@@ -21,7 +22,7 @@ type ScoreMap = Map.Map String Int
 type Categories = Map.Map String [Package.PackageDescription]
 
 packageName :: Package.PackageDescription -> String
-packageName = Package.unpackageName . Package.packageName
+packageName = PackageName.unPackageName . Package.packageName
 
 safeLast :: [a] -> Maybe a
 safeLast [] = Nothing
