@@ -21,7 +21,7 @@ type ScoreMap = Map.Map String Int
 type Categories = Map.Map String [Package.PackageDescription]
 
 packageName :: Package.PackageDescription -> String
-packageName = show . Package.packageName
+packageName = Package.unpackageName . Package.packageName
 
 safeLast :: [a] -> Maybe a
 safeLast [] = Nothing
